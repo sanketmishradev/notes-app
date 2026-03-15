@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Notes App</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface2: #273549;
+      --border: rgba(255,255,255,0.08);
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #6366f1;
+      --accent2: #818cf8;
+      --danger: #ef4444;
+      --yellow: #fbbf24;
+      --green: #34d399;
+      --pink: #f472b6;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo { font-size: 1.4rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+
+    .header-right { display: flex; align-items: center; gap: 12px; }
+
+    .search-wrap {
+      position: relative;
+    }
+
+    .search-wrap input {
+      padding: 9px 16px 9px 38px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+      width: 220px;
+      transition: border 0.2s;
+    }
+
+    .search-wrap input:focus { border-color: var(--accent2); }
+    .search-wrap input::placeholder { color: var(--muted); }
+
+    .search-wrap .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .btn-new {
+      padding: 9px 18px;
+      background: var(--accent);
+      border: none;
+      border-radius: 50px;
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s, transform 0.15s;
+    }
+
+    .btn-new:hover { background: var(--accent2); transform: scale(1.03); }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      gap: 24px;
+      padding: 14px 28px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-pill {
+      font-size: 0.82rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stat-pill span { color: var(--text); font-weight: 600; }
+
+    /* Main layout */
+    .container { padding: 28px; max-width: 1200px; margin: 0 auto; }
+
+    /* Filter tabs */
+    .filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      padding: 6px 16px;
+      border-radius: 50px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn.active, .filter-btn:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    /* Notes grid */
+    .notes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 18px;
+    }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      color: var(--muted);
+      padding: 60px 20px;
+    }
+
+    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+    .empty-state p { font-size: 1rem; }
+
+    /* Note card */
+    .note-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      animation: popIn 0.25s ease;
+      position: relative;
+    }
+
+    @keyframes popIn { from { opacity:0; transform: scale(0.95); } to { opacity:1; transform:none; } }
+
+    .note-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+
+    .note-color-dot {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .note-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      padding-right: 20px;
+    }
+
+    .note-body {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.6;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .note-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+
+    .note-date { font-size: 0.75rem; color: var(--muted); }
+
+    .note-actions { display: flex; gap: 6px; }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: background 0.2s;
+      color: var(--muted);
+    }
+
+    .icon-btn:hover { background: var(--surface2); color: var(--text); }
+    .icon-btn.delete:hover { color: var(--danger); }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+      display: none;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      width: 100%;
+      max-width: 520px;
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn { from { opacity:0; transform: translateY(-16px); } to { opacity:1; transform:none; } }
+
+    .modal h2 { margin-bottom: 20px; font-size: 1.2rem; }
+
+    .form-group { margin-bottom: 16px; }
+
+    .form-group label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      transition: border 0.2s;
+      resize: vertical;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus { border-color: var(--accent2); }
+
+    .form-group textarea { min-height: 120px; }
+
+    /* Color picker */
+    .color-picker { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .color-option {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 3px solid transparent;
+      transition: border 0.2s, transform 0.2s;
+    }
+
+    .color-option:hover, .color-option.selected { border-color: #fff; transform: scale(1.1); }
+
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+    .btn { padding: 10px 22px; border-radius: 50px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: opacity 0.2s; }
+    .btn:hover { opacity: 0.85; }
+    .btn-cancel { background: var(--surface2); color: var(--muted); }
+    .btn-save { background: var(--accent); color: #fff; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">📝 Notes</div>
+    <div class="header-right">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Search notes..." oninput="renderNotes()"/>
+      </div>
+      <button class="btn-new" onclick="openModal()">＋ New Note</button>
+    </div>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat-pill">📋 Total: <span id="totalCount">0</span></div>
+    <div class="stat-pill">📅 Today: <span id="todayCount">0</span></div>
+  </div>
+
+  <div class="container">
+    <div class="filters">
+      <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+      <button class="filter-btn" onclick="setFilter('red', this)" style="color:#f472b6">🔴 Important</button>
+      <button class="filter-btn" onclick="setFilter('yellow', this)" style="color:#fbbf24">🟡 Ideas</button>
+      <button class="filter-btn" onclick="setFilter('green', this)" style="color:#34d399">🟢 Tasks</button>
+      <button class="filter-btn" onclick="setFilter('indigo', this)" style="color:#818cf8">🔵 Personal</button>
+    </div>
+    <div class="notes-grid" id="notesGrid"></div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h2 id="modalTitle">✏️ New Note</h2>
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="noteTitle" placeholder="Note title..." maxlength="60"/>
+      </div>
+      <div class="form-group">
+        <label>Content</label>
+        <textarea id="noteBody" placeholder="Write your note here..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Color Tag</label>
+        <div class="color-picker" id="colorPicker">
+          <div class="color-option selected" data-color="indigo"  style="background:#6366f1" onclick="selectColor(this)"></div>
+          <div class="color-option"          data-color="red"     style="background:#f472b6" onclick="selectColor(this)"></div>
+          <div class="color-option"          data-color="yellow"  style="background:#fbbf24" onclick="selectColor(this)"></div>
+          <div class="color-option"          data-color="green"   style="background:#34d399" onclick="selectColor(this)"></div>
+          <div class="color-option"          data-color="cyan"    style="background:#22d3ee" onclick="selectColor(this)"></div>
+          <div class="color-option"          data-color="orange"  style="background:#fb923c" onclick="selectColor(this)"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-save"   onclick="saveNote()">Save Note</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const COLOR_MAP = {
+      indigo: "#6366f1", red: "#f472b6", yellow: "#fbbf24",
+      green: "#34d399", cyan: "#22d3ee", orange: "#fb923c"
+    };
+
+    let notes       = JSON.parse(localStorage.getItem("notes_app") || "[]");
+    let editId      = null;
+    let activeFilter= "all";
+    let selectedColor = "indigo";
+
+    function save() { localStorage.setItem("notes_app", JSON.stringify(notes)); }
+
+    function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+    function formatDate(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString("en-IN", { day:"numeric", month:"short", year:"numeric" });
+    }
+
+    function setFilter(color, btn) {
+      activeFilter = color;
+      document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      renderNotes();
+    }
+
+    function selectColor(el) {
+      document.querySelectorAll(".color-option").forEach(c => c.classList.remove("selected"));
+      el.classList.add("selected");
+      selectedColor = el.dataset.color;
+    }
+
+    function openModal(id = null) {
+      editId = id;
+      document.getElementById("modalTitle").textContent = id ? "✏️ Edit Note" : "✏️ New Note";
+      if (id) {
+        const n = notes.find(n => n.id === id);
+        document.getElementById("noteTitle").value = n.title;
+        document.getElementById("noteBody").value  = n.body;
+        selectedColor = n.color || "indigo";
+        document.querySelectorAll(".color-option").forEach(c => {
+          c.classList.toggle("selected", c.dataset.color === selectedColor);
+        });
+      } else {
+        document.getElementById("noteTitle").value = "";
+        document.getElementById("noteBody").value  = "";
+        selectedColor = "indigo";
+        document.querySelectorAll(".color-option").forEach(c => c.classList.toggle("selected", c.dataset.color === "indigo"));
+      }
+      document.getElementById("modalOverlay").classList.add("open");
+      setTimeout(() => document.getElementById("noteTitle").focus(), 100);
+    }
+
+    function closeModal() {
+      document.getElementById("modalOverlay").classList.remove("open");
+      editId = null;
+    }
+
+    function saveNote() {
+      const title = document.getElementById("noteTitle").value.trim();
+      const body  = document.getElementById("noteBody").value.trim();
+      if (!title && !body) { alert("Please enter a title or content."); return; }
+
+      if (editId) {
+        const n = notes.find(n => n.id === editId);
+        n.title = title || "Untitled";
+        n.body  = body;
+        n.color = selectedColor;
+        n.updated = new Date().toISOString();
+      } else {
+        notes.unshift({
+          id: genId(),
+          title: title || "Untitled",
+          body,
+          color: selectedColor,
+          created: new Date().toISOString(),
+          updated: new Date().toISOString(),
+        });
+      }
+
+      save();
+      closeModal();
+      renderNotes();
+    }
+
+    function deleteNote(id) {
+      if (!confirm("Delete this note?")) return;
+      notes = notes.filter(n => n.id !== id);
+      save();
+      renderNotes();
+    }
+
+    function renderNotes() {
+      const query   = document.getElementById("searchInput").value.toLowerCase();
+      const grid    = document.getElementById("notesGrid");
+      const today   = new Date().toDateString();
+
+      let filtered = notes;
+      if (activeFilter !== "all") filtered = filtered.filter(n => n.color === activeFilter);
+      if (query) filtered = filtered.filter(n =>
+        n.title.toLowerCase().includes(query) || n.body.toLowerCase().includes(query)
+      );
+
+      document.getElementById("totalCount").textContent = notes.length;
+      document.getElementById("todayCount").textContent = notes.filter(n => new Date(n.created).toDateString() === today).length;
+
+      if (!filtered.length) {
+        grid.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>${query ? "No notes match your search." : "No notes yet. Click '+ New Note' to get started!"}</p></div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(n => `
+        <div class="note-card">
+          <div class="note-color-dot" style="background:${COLOR_MAP[n.color] || '#6366f1'}"></div>
+          <div class="note-title">${escHtml(n.title)}</div>
+          ${n.body ? `<div class="note-body">${escHtml(n.body)}</div>` : ""}
+          <div class="note-footer">
+            <div class="note-date">📅 ${formatDate(n.updated)}</div>
+            <div class="note-actions">
+              <button class="icon-btn" onclick="openModal('${n.id}')" title="Edit">✏️</button>
+              <button class="icon-btn delete" onclick="deleteNote('${n.id}')" title="Delete">🗑️</button>
+            </div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    // Close modal on overlay click
+    document.getElementById("modalOverlay").addEventListener("click", e => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+
+    renderNotes();
+  </script>
+</body>
+</html>
